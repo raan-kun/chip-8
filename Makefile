@@ -19,4 +19,4 @@ chip8.o: chip8.c chip8.h
 	gcc $(CFLAGS) -c chip8.c
 
 clean:
-	rm -f main $(OBJ)
+	rm -f main test_chip8 $(OBJ) test_chip8.o
