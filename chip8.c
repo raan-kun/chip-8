@@ -28,7 +28,7 @@ void chip8_initialise(chip8 chip) {
 
 	// clear display
 	for(int i = 0; i < 64*32; i++) {
-		chip.display[i] = 0;
+		chip.gfx[i] = 0;
 	}
 
 	// clear stack and registers
@@ -264,7 +264,7 @@ void chip8_tick(chip8 chip) {
 
 						// V[f] = 1 if collision occured
 						if(chip.gfx[curr_pix] == 1) {
-							V[0xf] = 1;
+							chip.V[0xf] = 1;
 						}
 
 						// update this pixel
