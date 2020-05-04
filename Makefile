@@ -6,6 +6,12 @@ EXEC = main
 $(EXEC): $(OBJ)
 	gcc $(OBJ) $(SDL2FLAGS) -o $(EXEC)
 
+test_chip8: test_chip8.o chip8.o
+	gcc test_chip8.o chip8.o -o test_chip8
+
+test_chip8.o: test_chip8.c
+	gcc $(CFLAGS) -c test_chip8.c
+
 main.o: main.c
 	gcc $(CFLAGS) -c main.c
 
