@@ -20,45 +20,45 @@ unsigned char chip8_fontset[80] = {
 };
 
 // initialise registers and memory
-void chip8_initialise(chip8 chip) {
-	chip.pc = 0x200; // pc always starts at 0x200
-	chip.opcode = 0;
-	chip.I = 0;
-	chip.sp = 0;
+void chip8_init(chip8* chip) {
+	chip->pc = 0x200; // pc always starts at 0x200
+	chip->opcode = 0;
+	chip->I = 0;
+	chip->sp = 0;
 
 	// clear display
 	for(int i = 0; i < 64*32; i++) {
-		chip.gfx[i] = 0;
+		chip->gfx[i] = 0;
 	}
 
 	// clear stack and registers
 	for(int i = 0; i < 16; i++) {
-		chip.stack[i] = 0;
-		chip.V[i] = 0;
+		chip->stack[i] = 0;
+		chip->V[i] = 0;
 	}
 
 	// clear memory
 	for(int i = 0; i < 4096; i++) {
-		chip.memory[i] = 0;
+		chip->memory[i] = 0;
 	}
 
 	// load fontset
-	for(int i = 0; i < 80; ++i) {
-		chip.memory[i] = chip8_fontset[i];
+	for(int i = 0; i < 80; i++) {
+		chip->memory[i] = chip8_fontset[i];
 	}
 
 	// reset timers
-	chip.delay_timer = 0;
-	chip.sound_timer = 0;
+	chip->delay_timer = 0;
+	chip->sound_timer = 0;
 
 	// draw flag
-	chip.draw_flag = false;
+	chip->draw_flag = false;
 
 	// seed RNG
 	srand(time(NULL));
 }
 
-void chip8_load_program(const chip8* chip, char* filename) {
+void chip8_load_program(chip8* chip, const char* filename) {
 	// TODO: find out what this 'buffersize' and 'buffer' stuff is about
 	FILE* fp = fopen(filename, "rb");
 
@@ -79,6 +79,18 @@ void chip8_tick(chip8 chip) {
 
 	// decode & execute opcode
 	switch(opcode & 0xF000) {
+		// temp storage variables -- have to declare them here
+		unsigned char reg;
+		unsigned char reg_x;
+		unsigned char reg_y;
+		unsigned short x;
+		unsigned short y;
+		unsigned char opcode_X;
+		unsigned short height;
+		unsigned short sprite_line;
+		unsigned char offset;
+		bool key_press;
+
 		// multiple opcodes start with 0
 		case 0x0000:
 			switch(opcode & 0x000f) {
@@ -94,9 +106,10 @@ void chip8_tick(chip8 chip) {
 				break;
 				// 0NNN
 				default:
+				break;
 					// stub
-			}
-			break;
+			};
+		break;
 		// 1NNN -- jump to NNN
 		case 0x1000:
 			chip.pc = opcode & 0x0FFF;
@@ -109,8 +122,8 @@ void chip8_tick(chip8 chip) {
 		break;
 		// 3XNN -- skip next instruction if V[X] == NN
 		case 0x3000:
-			unsigned char reg = (opcode & 0x0f00) >> 8;
-			if(opcode & 0x00FF == chip.V[reg]) {
+			reg = (opcode & 0x0f00) >> 8;
+			if((opcode & 0x00FF) == chip.V[reg]) {
 				chip.pc += 4;
 			}
 			else {
@@ -120,8 +133,8 @@ void chip8_tick(chip8 chip) {
 		break;
 		// 4XNN -- skip next instruction if V[X] != NN
 		case 0x4000:
-			unsigned char reg = (opcode & 0x0f00) >> 8;
-			if(opcode & 0x00ff != chip.V[reg]) {
+			reg = (opcode & 0x0f00) >> 8;
+			if((opcode & 0x00ff) != chip.V[reg]) {
 				chip.pc += 4;
 			}
 			else {
@@ -130,8 +143,8 @@ void chip8_tick(chip8 chip) {
 		break;
 		// 5XY0 -- skip next instruction if V[X] == V[Y]
 		case 0x5000:
-			unsigned char reg_x = (opcode & 0x0f00) >> 8;
-			unsigned char reg_y = (opcode & 0x00f0) >> 4;
+			reg_x = (opcode & 0x0f00) >> 8;
+			reg_y = (opcode & 0x00f0) >> 4;
 			if(chip.V[reg_x] == chip.V[reg_y]) {
 				chip.pc += 4;
 			}
@@ -151,8 +164,8 @@ void chip8_tick(chip8 chip) {
 		break;
 		// multiple opcodes start with 8
 		case 0x8000:
-			unsigned char reg_x = (opcode & 0x0f00) >> 8;
-			unsigned char reg_y = (opcode & 0x00f0) >> 4;
+			reg_x = (opcode & 0x0f00) >> 8;
+			reg_y = (opcode & 0x00f0) >> 4;
 			switch(opcode & 0x000f) {
 				// 8XY0 -- set V[X] to val in V[Y]
 				case 0x0000:
@@ -212,14 +225,14 @@ void chip8_tick(chip8 chip) {
 				break;
 				default:
 					printf("ERROR -- Unknown opcode: 0x%X\n", opcode);
-			}
+			};
 
 			chip.pc += 2;
 		break;
 		// 9XY0 -- skip next instruction if V[X] != V[Y]
 		case 0x9000:
-			unsigned char reg_x = (opcode & 0x0f00) >> 8;
-			unsigned char reg_y = (opcode & 0x00f0) >> 4;
+			reg_x = (opcode & 0x0f00) >> 8;
+			reg_y = (opcode & 0x00f0) >> 4;
 			if(chip.V[reg_x] != chip.V[reg_y]) {
 				chip.pc += 4;
 			}
@@ -244,10 +257,9 @@ void chip8_tick(chip8 chip) {
 		break;
 		// DXYN -- draw a 8xN sprite at coord (V[X], V[Y])
 		case 0xD000:
-			unsigned short x = chip.V[(opcode & 0x0f00) >> 8];
-			unsigned short y = chip.V[(opcode & 0x00f0) >> 4];
-			unsigned short height = opcode & 0x000f;
-			unsigned short sprite_line;
+			x = chip.V[(opcode & 0x0f00) >> 8];
+			y = chip.V[(opcode & 0x00f0) >> 4];
+			height = opcode & 0x000f;
 
 			chip.V[0xf] = 0;
 			// for each line in the sprite
@@ -300,10 +312,10 @@ void chip8_tick(chip8 chip) {
 				break;
 				default:
 					printf("ERROR -- Unknown opcode: 0x%X\n", opcode);
-			}
+			};
 		// multiple opcodes begin with F
 		case 0xF000:
-			unsigned char opcode_X = (opcode & 0x0f00) >> 8;
+			opcode_X = (opcode & 0x0f00) >> 8;
 
 			switch(opcode & 0x00ff) {
 				// FX07 -- set V[X] to val of delay timer
@@ -313,7 +325,7 @@ void chip8_tick(chip8 chip) {
 				break;
 				// FX0A -- wait for key press and store in V[X]
 				case 0x000a:
-					bool key_press = false;
+					key_press = false;
 					for(int i = 0; i < 16; i++) {
 						if(chip.key[i] != 0) {
 							chip.V[opcode_X] = i;
@@ -356,7 +368,7 @@ void chip8_tick(chip8 chip) {
 				// FX33 -- stores binary-coded decimal representation of V[X]
 				//         in mem[I], mem[I+1], mem[I+2], mem[I+3]
 				case 0x0033:
-					unsigned char reg = opcode_X;
+					reg = opcode_X;
 					chip.memory[chip.I] = (chip.V[reg] / 100);
 					chip.memory[chip.I+1] = (chip.V[reg] / 10) % 10;
 					chip.memory[chip.I+2] = (chip.V[reg] % 100) % 10;
@@ -364,7 +376,7 @@ void chip8_tick(chip8 chip) {
 				break;
 				// FX55 -- store V[0] to V[X] in mem, starting from I
 				case 0x0055:
-					unsigned char offset = opcode_X;
+					offset = opcode_X;
 					for(int i = 0; i < offset; i++) {
 						chip.memory[chip.I + offset] = chip.V[offset];
 					}
@@ -372,7 +384,7 @@ void chip8_tick(chip8 chip) {
 				break;
 				// FX65 -- fill V[0] to V[X] with vals from mem, starting at I
 				case 0x0065:
-					unsigned char offset = opcode_X;
+					offset = opcode_X;
 					for(int i = 0; i < offset; i++) {
 						chip.V[offset] = chip.memory[chip.I + offset];
 					}
@@ -380,11 +392,11 @@ void chip8_tick(chip8 chip) {
 				break;
 				default:
 					printf("ERROR -- Unknown opcode: 0x%X\n", opcode);
-			}
+			};
 		default:
 			printf("ERROR -- Unknown opcode: 0x%X\n", opcode);
 
-	}
+	};
 
 	// update timers
 	if(chip.delay_timer > 0) {

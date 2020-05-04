@@ -25,6 +25,6 @@ typedef struct chip8 {
 	bool draw_flag;
 } chip8;
 
-void chip8_initialise(chip8 chip);
-void chip8_load_program(chip8 chip, char* filename);
+void chip8_init(chip8* chip);
+void chip8_load_program(chip8* chip, const char* filename);
 void chip8_tick(chip8 chip);
