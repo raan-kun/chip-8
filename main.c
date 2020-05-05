@@ -11,10 +11,10 @@
 // display resolution
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
-#define SCALE_FACTOR 2;
+#define SCALE_FACTOR 5.0
 
-int display_width = SCREEN_WIDTH * SCALE_FACTOR
-int display_height = SCREEN_HEIGHT * SCALE_FACTOR
+int display_width = SCREEN_WIDTH * SCALE_FACTOR;
+int display_height = SCREEN_HEIGHT * SCALE_FACTOR;
 
 void handle_keydown(chip8* chip, SDL_KeyboardEvent event) {
 	switch(event.keysym.scancode) {
@@ -145,9 +145,11 @@ int main(int argc, char** argv) {
 		printf("SDL failed initialising: %s\n", SDL_GetError());
 		return 1;
 	}
-	SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN, &window, &renderer);
+	SDL_CreateWindowAndRenderer(display_width, display_height, SDL_WINDOW_SHOWN, &window, &renderer);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, SCREEN_WIDTH, SCREEN_HEIGHT);
 	Uint32* pixels = calloc(SCREEN_WIDTH*SCREEN_HEIGHT, sizeof(Uint32));
+
+	SDL_RenderSetScale(renderer, SCALE_FACTOR, SCALE_FACTOR);
 
 	// main loop
 	bool quit = false;
