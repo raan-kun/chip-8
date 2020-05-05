@@ -1,5 +1,5 @@
 SDL2FLAGS = `sdl2-config --cflags --libs`
-CFLAGS = -Wall -pedantic $(SDL2FLAGS) -g
+CFLAGS = -Wall -pedantic $(SDL2FLAGS)
 OBJ = main.o chip8.o
 EXEC = main
 

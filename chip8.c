@@ -47,6 +47,11 @@ void chip8_init(chip8* chip) {
 		chip->memory[i] = chip8_fontset[i];
 	}
 
+	// clear key registers
+	for(int i = 0; i < 16; i++) {
+		chip->key[i] = 0;
+	}
+
 	// reset timers
 	chip->delay_timer = 0;
 	chip->sound_timer = 0;
@@ -86,7 +91,7 @@ void chip8_tick(chip8* chip) {
 	// so we must access two memory locations and merge the two parts of the instruction together
 	chip->opcode = chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1];
 	unsigned short opcode = chip->opcode;
-	printf("pc:%d (%d), op:%04X\n", chip->pc-512, chip->pc, opcode);
+	printf("pc:%d (%d), op:%04X\n", chip->pc-512, chip->pc, opcode); // DEBUG
 
 	// don't draw screen if we don't need to
 	chip->draw_flag = false;
@@ -94,15 +99,15 @@ void chip8_tick(chip8* chip) {
 	// decode & execute opcode
 	switch(opcode & 0xF000) {
 		// temp storage variables -- have to declare them here
-		unsigned char reg;
-		unsigned char reg_x;
-		unsigned char reg_y;
-		unsigned short x_coord;
-		unsigned short y_coord;
-		unsigned char opcode_X;
-		unsigned short height;
-		unsigned char offset;
-		bool key_press;
+		unsigned char   reg;
+		unsigned char   reg_x;
+		unsigned char   reg_y;
+		unsigned short  x_coord;
+		unsigned short  y_coord;
+		unsigned char   opcode_X;
+		unsigned short  height;
+		unsigned char   offset;
+		bool            key_press;
 
 		// multiple opcodes start with 0
 		case 0x0000:
@@ -114,29 +119,31 @@ void chip8_tick(chip8* chip) {
 							chip->gfx[64*i + j] = 0;
 						}
 					}
-				break;
+					chip->draw_flag = true;
+					chip->pc += 2;
+					break;
 				// 00EE -- return from subroutine
 				case 0x000E:
 					chip->sp -= 1;
 					chip->pc = chip->stack[chip->sp];
 					chip->pc += 2;
-				break;
+					break;
 				// 0NNN
 				default:
 					// stub
-				break;
+					break;
 			};
-		break;
+			break;
 		// 1NNN -- jump to NNN
 		case 0x1000:
 			chip->pc = opcode & 0x0FFF;
-		break;
+			break;
 		// 2NNN -- call subroutine at NNN
 		case 0x2000:
 			chip->stack[chip->sp] = chip->pc;
 			chip->sp += 1;
 			chip->pc = opcode & 0x0fff;
-		break;
+			break;
 		// 3XNN -- skip next instruction if V[X] == NN
 		case 0x3000:
 			reg = (opcode & 0x0f00) >> 8;
@@ -147,7 +154,7 @@ void chip8_tick(chip8* chip) {
 				chip->pc += 2;
 			}
 
-		break;
+			break;
 		// 4XNN -- skip next instruction if V[X] != NN
 		case 0x4000:
 			reg = (opcode & 0x0f00) >> 8;
@@ -157,7 +164,7 @@ void chip8_tick(chip8* chip) {
 			else {
 				chip->pc +=2;
 			}	
-		break;
+			break;
 		// 5XY0 -- skip next instruction if V[X] == V[Y]
 		case 0x5000:
 			reg_x = (opcode & 0x0f00) >> 8;
@@ -168,17 +175,17 @@ void chip8_tick(chip8* chip) {
 			else {
 				chip->pc +=2;
 			}
-		break;
+			break;
 		// 6XNN -- sets V[X] to NN
 		case 0x6000:
 			chip->V[(opcode & 0x0f00) >> 8] = opcode & 0x00ff;
 			chip->pc += 2;
-		break;
+			break;
 		// 7XNN -- adds NN to V[X]
 		case 0x7000:
 			chip->V[(opcode & 0x0f00) >> 8] += opcode & 0x00ff;
 			chip->pc += 2;
-		break;
+			break;
 		// multiple opcodes start with 8
 		case 0x8000:
 			reg_x = (opcode & 0x0f00) >> 8;
@@ -187,19 +194,19 @@ void chip8_tick(chip8* chip) {
 				// 8XY0 -- set V[X] to val in V[Y]
 				case 0x0000:
 					chip->V[reg_x] = chip->V[reg_y];
-				break;
+					break;
 				// 8XY1 -- V[X] = V[X] | V[Y]
 				case 0x0001:
 					chip->V[reg_x] = chip->V[reg_x] | chip->V[reg_y];
-				break;
+					break;
 				// 8XY2 -- V[X] = V[X] & V[Y]
 				case 0x0002:
 					chip->V[reg_x] = chip->V[reg_x] & chip->V[reg_y];
-				break;
+					break;
 				// 8XY3 -- V[X] = V[X] ^ V[Y]
 				case 0x0003:
 					chip->V[reg_x] = chip->V[reg_x] ^ chip->V[reg_y];
-				break;
+					break;
 				// 8XY4 -- V[X] += V[Y]. V[F] = 1 if there's a carry
 				case 0x004:
 					if(chip->V[reg_y] > 0xff - chip->V[reg_x]) {
@@ -209,7 +216,7 @@ void chip8_tick(chip8* chip) {
 						chip->V[0xf] = 0;
 					}
 					chip->V[reg_x] += chip->V[reg_y];
-				break;
+					break;
 				// 8XY5 -- V[X] -= V[Y]. V[F] = 0 if there's a borrow
 				case 0x005:
 					if(chip->V[reg_y] > chip->V[reg_x]) {
@@ -219,12 +226,12 @@ void chip8_tick(chip8* chip) {
 						chip->V[0xf] = 1;
 					}
 					chip->V[reg_x] -= chip->V[reg_y];
-				break;
+					break;
 				// 8XY6 -- store LSB of V[X] in V[F], then V[X] >> 1
 				case 0x006:
 					chip->V[0xf] = chip->V[reg_x] & 0x0001;
 					chip->V[reg_x] >>= 1;
-				break;
+					break;
 				// 8XY7 -- V[X] = V[Y] - V[X]. V[F] = 0 if there's a borrow
 				case 0x007:
 					if(chip->V[reg_x] > chip->V[reg_y]) {
@@ -234,18 +241,18 @@ void chip8_tick(chip8* chip) {
 						chip->V[0xf] = 1;
 					}
 					chip->V[reg_x] = chip->V[reg_y] - chip->V[reg_x];
-				break;
+					break;
 				// 8XYE -- store LSB of V[X] in V[F], then V[X] << 1
 				case 0x00E:
 					chip->V[0xf] = chip->V[reg_x] & 0x0001;
 					chip->V[reg_x] <<= 1;
-				break;
+					break;
 				default:
 					printf("ERROR -- Unknown opcode: 0x%X\n", opcode);
 			};
 
 			chip->pc += 2;
-		break;
+			break;
 		// 9XY0 -- skip next instruction if V[X] != V[Y]
 		case 0x9000:
 			reg_x = (opcode & 0x0f00) >> 8;
@@ -257,27 +264,27 @@ void chip8_tick(chip8* chip) {
 				chip->pc += 2;
 			}
 
-		break;
+			break;
 		// ANNN -- sets I to address NNN
 		case 0xA000:
 			chip->I = opcode & 0x0fff;
 			chip->pc += 2;
-		break;
+			break;
 		// BNNN -- jump to address (NNN + V[0])
 		case 0xB000:
 			chip->pc = (opcode & 0x0fff) + chip->V[0];
-		break;
+			break;
 		// CXNN -- set V[X] to NN & rand(255)
 		case 0xC000:
 			chip->V[(opcode & 0x0f00) >> 8] = (opcode & 0x00ff) & (rand() % 256);
 			chip->pc += 2;
-		break;
+			break;
 		// DXYN -- draw an 8xN sprite (located at I) at coord (V[X], V[Y])
 		case 0xD000:
 			x_coord = chip->V[(opcode & 0x0f00) >> 8];
 			y_coord = chip->V[(opcode & 0x00f0) >> 4];
-			unsigned short curr_pix;
 			height = opcode & 0x000f;
+			unsigned short curr_pix;
 
 			chip->V[0xf] = 0;
 			// for each line in the sprite
@@ -306,7 +313,7 @@ void chip8_tick(chip8* chip) {
 
 			chip->draw_flag = true;
 			chip->pc += 2;
-		break;
+			break;
 		// multiple opcodes begin with E
 		case 0xE000:
 			switch(opcode & 0x00ff) {
@@ -318,20 +325,20 @@ void chip8_tick(chip8* chip) {
 					else {
 						chip->pc += 2;
 					}
-				break;
+					break;
 				// EXA1 -- skip next instruction if key stored in V[X] isn't pressed
 				case 0x00a1:
-					if(chip->key[chip->V[opcode & 0x0f00 >> 8]] != 0) {
-						chip->pc += 2;
-					}
-					else {
+					if(chip->key[chip->V[opcode & 0x0f00 >> 8]] == 0) {
 						chip->pc += 4;
 					}
-				break;
+					else {
+						chip->pc += 2;
+					}
+					break;
 				default:
 					printf("ERROR -- Unknown opcode: 0x%X\n", opcode);
 			};
-		break;
+			break;
 		// multiple opcodes begin with F
 		case 0xF000:
 			opcode_X = (opcode & 0x0f00) >> 8;
@@ -340,7 +347,7 @@ void chip8_tick(chip8* chip) {
 				case 0x0007:
 					chip->V[opcode_X] = chip->delay_timer;
 					chip->pc += 2;
-				break;
+					break;
 				// FX0A -- wait for key press and store in V[X]
 				case 0x000a:
 					key_press = false;
@@ -357,17 +364,17 @@ void chip8_tick(chip8* chip) {
 					}
 
 					chip->pc += 2;
-				break;
+					break;
 				// FX15 -- set delay timer to V[X]
 				case 0x0015:
 					chip->delay_timer = chip->V[opcode_X];
 					chip->pc += 2;
-				break;
+					break;
 				// FX18 -- set sound timer to V[X]
 				case 0x0018:
 					chip->sound_timer = chip->V[opcode_X];
 					chip->pc += 2;
-				break;
+					break;
 				// FX1E -- I += V[X]. V[F] = 1 if overflows
 				case 0x001E:
 					if(chip->V[opcode_X] > 0xff - chip->I) {
@@ -378,12 +385,12 @@ void chip8_tick(chip8* chip) {
 					}
 					chip->I += chip->V[opcode_X];
 					chip->pc += 2;
-				break;
+					break;
 				// FX29 -- 
 				case 0x0029:
 					chip->I = chip->V[opcode_X] * 5;
 					chip->pc += 2;
-				break;
+					break;
 				// FX33 -- stores binary-coded decimal representation of V[X]
 				//         in mem[I], mem[I+1], mem[I+2], mem[I+3]
 				case 0x0033:
@@ -392,7 +399,7 @@ void chip8_tick(chip8* chip) {
 					chip->memory[chip->I+1] = (chip->V[reg] / 10) % 10;
 					chip->memory[chip->I+2] = (chip->V[reg] % 100) % 10;
 					chip->pc += 2;
-				break;
+					break;
 				// FX55 -- store V[0] to V[X] in mem, starting from I
 				case 0x0055:
 					offset = opcode_X;
@@ -400,7 +407,7 @@ void chip8_tick(chip8* chip) {
 						chip->memory[chip->I + offset] = chip->V[offset];
 					}
 					chip->pc += 2;
-				break;
+					break;
 				// FX65 -- fill V[0] to V[X] with vals from mem, starting at I
 				case 0x0065:
 					offset = opcode_X;
@@ -408,11 +415,11 @@ void chip8_tick(chip8* chip) {
 						chip->V[offset] = chip->memory[chip->I + offset];
 					}
 					chip->pc += 2;
-				break;
+					break;
 				default:
 					printf("ERROR -- Unknown opcode: 0x%X\n", opcode);
 			};
-		break;
+			break;
 		// invalid opcode
 		default:
 			printf("ERROR -- Unknown opcode: 0x%X\n", opcode);
@@ -426,7 +433,7 @@ void chip8_tick(chip8* chip) {
 
 	if(chip->sound_timer > 0) {
 		if(chip->sound_timer == 1) {
-			printf("BEEP\n");
+			// printf("BEEP\n");
 		}
 		chip->sound_timer -= 1;
 	}

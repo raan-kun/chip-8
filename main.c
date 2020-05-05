@@ -5,20 +5,134 @@
 #include <SDL2/SDL_keycode.h>
 #include <SDL2/SDL_scancode.h>
 #include <SDL2/SDL_keyboard.h>
+#include <SDL2/SDL_events.h>
 #include "chip8.h"
 
 const int SCREEN_WIDTH = 64;
 const int SCREEN_HEIGHT = 32;
 
+void handle_keydown(chip8* chip, SDL_KeyboardEvent event) {
+	switch(event.keysym.scancode) {
+		case SDL_SCANCODE_1:
+			chip->key[0x1] = 1;
+			break;
+		case SDL_SCANCODE_2:
+			chip->key[0x2] = 1;
+			break;
+		case SDL_SCANCODE_3:
+			chip->key[0x3] = 1;
+			break;
+		case SDL_SCANCODE_4:
+			chip->key[0xC] = 1;
+			break;
+		case SDL_SCANCODE_Q:
+			chip->key[0x4] = 1;
+			break;
+		case SDL_SCANCODE_W:
+			chip->key[0x5] = 1;
+			break;
+		case SDL_SCANCODE_E:
+			chip->key[0x6] = 1;
+			break;
+		case SDL_SCANCODE_R:
+			chip->key[0xD] = 1;
+			break;
+		case SDL_SCANCODE_A:
+			chip->key[0x7] = 1;
+			break;
+		case SDL_SCANCODE_S:
+			chip->key[0x8] = 1;
+			break;
+		case SDL_SCANCODE_D:
+			chip->key[0x9] = 1;
+			break;
+		case SDL_SCANCODE_F:
+			chip->key[0xE] = 1;
+			break;
+		case SDL_SCANCODE_Z:
+			chip->key[0xA] = 1;
+			break;
+		case SDL_SCANCODE_X:
+			chip->key[0x0] = 1;
+			break;
+		case SDL_SCANCODE_C:
+			chip->key[0xB] = 1;
+			break;
+		case SDL_SCANCODE_V:
+			chip->key[0xF] = 1;
+			break;
+		default:
+			break;
+	};
+}
+
+void handle_keyup(chip8* chip, SDL_KeyboardEvent event) {
+	switch(event.keysym.scancode) {
+		case SDL_SCANCODE_1:
+			chip->key[0x1] = 0;
+			break;
+		case SDL_SCANCODE_2:
+			chip->key[0x2] = 0;
+			break;
+		case SDL_SCANCODE_3:
+			chip->key[0x3] = 0;
+			break;
+		case SDL_SCANCODE_4:
+			chip->key[0xC] = 0;
+			break;
+		case SDL_SCANCODE_Q:
+			chip->key[0x4] = 0;
+			break;
+		case SDL_SCANCODE_W:
+			chip->key[0x5] = 0;
+			break;
+		case SDL_SCANCODE_E:
+			chip->key[0x6] = 0;
+			break;
+		case SDL_SCANCODE_R:
+			chip->key[0xD] = 0;
+			break;
+		case SDL_SCANCODE_A:
+			chip->key[0x7] = 0;
+			break;
+		case SDL_SCANCODE_S:
+			chip->key[0x8] = 0;
+			break;
+		case SDL_SCANCODE_D:
+			chip->key[0x9] = 0;
+			break;
+		case SDL_SCANCODE_F:
+			chip->key[0xE] = 0;
+			break;
+		case SDL_SCANCODE_Z:
+			chip->key[0xA] = 0;
+			break;
+		case SDL_SCANCODE_X:
+			chip->key[0x0] = 0;
+			break;
+		case SDL_SCANCODE_C:
+			chip->key[0xB] = 0;
+			break;
+		case SDL_SCANCODE_V:
+			chip->key[0xF] = 0;
+			break;
+		default:
+			break;
+	};
+}
+
 int main(int argc, char** argv) {
-	chip8 chip;
-	SDL_Event event;
 	SDL_Window* window = NULL;
 	SDL_Renderer* renderer = NULL;
 
+	SDL_Event event;
+	SDL_KeyboardEvent kb_event;
+
+	chip8 chip;
+
 	// initialise chip8
 	chip8_init(&chip);
-	chip8_load_program(&chip, "pong2.c8");
+	chip8_load_program(&chip, argv[1]);
 
 	// initialise SDL window
 	if(SDL_Init(SDL_INIT_VIDEO) < 0) {
@@ -28,7 +142,28 @@ int main(int argc, char** argv) {
 	SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN, &window, &renderer);
 
 	// main loop
-	while(true) {
+	bool quit = false;
+	while(!quit) {
+		// event loop
+		while(SDL_PollEvent(&event) != 0) {
+			switch(event.type) {
+				case SDL_QUIT:
+					quit = true;
+					break;
+				case SDL_KEYDOWN:
+					kb_event = event.key;
+					handle_keydown(&chip, kb_event);
+					break;
+				case SDL_KEYUP:
+					kb_event = event.key;
+					handle_keyup(&chip, kb_event);
+					break;
+				default:
+					// unhandled event
+					break;	
+			};
+		}
+
 		// simulate 1 cycle for chip8
 		chip8_tick(&chip);
 
@@ -39,33 +174,20 @@ int main(int argc, char** argv) {
 			SDL_RenderClear(renderer);
 
 			// scan gfx[] for pixels that are turned on
+			SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
 			for(int y = 0; y < SCREEN_HEIGHT; y++) {
 				for(int x = 0; x < SCREEN_WIDTH; x++) {
 					if(chip.gfx[SCREEN_WIDTH*y + x] == 1) {
-						SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
 						SDL_RenderDrawPoint(renderer, x, y);
 					}
 				}
 			}
+			SDL_RenderPresent(renderer);
+			chip.draw_flag = false;
 		}
-		// commit to draw
-		SDL_RenderPresent(renderer);
 
-		if(SDL_PollEvent(&event) && event.type == SDL_QUIT)
-			break;
-
-		SDL_Delay(32);
+		SDL_Delay(5);
 	}
-
-	// for(int i = 0; i < 32; i++) {
-	// 	printf("[");
-	// 	for(int j = 0; j < 64; j++) {
-	// 		printf("%d ", chip.gfx[SCREEN_WIDTH*i + j]);
-	// 	}
-	// 	printf("]\n");
-	// }
-
-
 
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
