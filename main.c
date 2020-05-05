@@ -8,8 +8,13 @@
 #include <SDL2/SDL_events.h>
 #include "chip8.h"
 
-const int SCREEN_WIDTH = 64;
-const int SCREEN_HEIGHT = 32;
+// display resolution
+#define SCREEN_WIDTH 64
+#define SCREEN_HEIGHT 32
+#define SCALE_FACTOR 2;
+
+int display_width = SCREEN_WIDTH * SCALE_FACTOR
+int display_height = SCREEN_HEIGHT * SCALE_FACTOR
 
 void handle_keydown(chip8* chip, SDL_KeyboardEvent event) {
 	switch(event.keysym.scancode) {
@@ -123,6 +128,7 @@ void handle_keyup(chip8* chip, SDL_KeyboardEvent event) {
 
 int main(int argc, char** argv) {
 	SDL_Window* window = NULL;
+	SDL_Texture* texture = NULL;
 	SDL_Renderer* renderer = NULL;
 
 	SDL_Event event;
@@ -140,10 +146,14 @@ int main(int argc, char** argv) {
 		return 1;
 	}
 	SDL_CreateWindowAndRenderer(SCREEN_WIDTH, SCREEN_HEIGHT, SDL_WINDOW_SHOWN, &window, &renderer);
+	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, SCREEN_WIDTH, SCREEN_HEIGHT);
+	Uint32* pixels = calloc(SCREEN_WIDTH*SCREEN_HEIGHT, sizeof(Uint32));
 
 	// main loop
 	bool quit = false;
 	while(!quit) {
+		SDL_UpdateTexture(texture, NULL, pixels, SCREEN_WIDTH * sizeof(Uint32));
+
 		// event loop
 		while(SDL_PollEvent(&event) != 0) {
 			switch(event.type) {
@@ -167,21 +177,15 @@ int main(int argc, char** argv) {
 		// simulate 1 cycle for chip8
 		chip8_tick(&chip);
 
-		// draw pixels from gfx[]
 		if(chip.draw_flag) {
-			// clear screen before draw
-			SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
-			SDL_RenderClear(renderer);
-
-			// scan gfx[] for pixels that are turned on
-			SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+			// copy pixels from gfx[] into pixels array
 			for(int y = 0; y < SCREEN_HEIGHT; y++) {
 				for(int x = 0; x < SCREEN_WIDTH; x++) {
-					if(chip.gfx[SCREEN_WIDTH*y + x] == 1) {
-						SDL_RenderDrawPoint(renderer, x, y);
-					}
+					pixels[SCREEN_WIDTH*y + x] = 0xffffffff * chip.gfx[SCREEN_WIDTH*y + x];
 				}
 			}
+			SDL_RenderClear(renderer);
+			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
 			chip.draw_flag = false;
 		}
@@ -189,6 +193,8 @@ int main(int argc, char** argv) {
 		SDL_Delay(5);
 	}
 
+	free(pixels);
+	SDL_DestroyTexture(texture);
 	SDL_DestroyRenderer(renderer);
 	SDL_DestroyWindow(window);
 	SDL_Quit();

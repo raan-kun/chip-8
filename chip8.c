@@ -91,7 +91,7 @@ void chip8_tick(chip8* chip) {
 	// so we must access two memory locations and merge the two parts of the instruction together
 	chip->opcode = chip->memory[chip->pc] << 8 | chip->memory[chip->pc + 1];
 	unsigned short opcode = chip->opcode;
-	printf("pc:%d (%d), op:%04X\n", chip->pc-512, chip->pc, opcode); // DEBUG
+	// printf("pc:%d (%d), op:%04X\n", chip->pc-512, chip->pc, opcode); // DEBUG
 
 	// don't draw screen if we don't need to
 	chip->draw_flag = false;
