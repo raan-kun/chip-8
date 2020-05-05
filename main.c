@@ -16,114 +16,34 @@
 int display_width = SCREEN_WIDTH * SCALE_FACTOR;
 int display_height = SCREEN_HEIGHT * SCALE_FACTOR;
 
-void handle_keydown(chip8* chip, SDL_KeyboardEvent event) {
-	switch(event.keysym.scancode) {
-		case SDL_SCANCODE_1:
-			chip->key[0x1] = 1;
-			break;
-		case SDL_SCANCODE_2:
-			chip->key[0x2] = 1;
-			break;
-		case SDL_SCANCODE_3:
-			chip->key[0x3] = 1;
-			break;
-		case SDL_SCANCODE_4:
-			chip->key[0xC] = 1;
-			break;
-		case SDL_SCANCODE_Q:
-			chip->key[0x4] = 1;
-			break;
-		case SDL_SCANCODE_W:
-			chip->key[0x5] = 1;
-			break;
-		case SDL_SCANCODE_E:
-			chip->key[0x6] = 1;
-			break;
-		case SDL_SCANCODE_R:
-			chip->key[0xD] = 1;
-			break;
-		case SDL_SCANCODE_A:
-			chip->key[0x7] = 1;
-			break;
-		case SDL_SCANCODE_S:
-			chip->key[0x8] = 1;
-			break;
-		case SDL_SCANCODE_D:
-			chip->key[0x9] = 1;
-			break;
-		case SDL_SCANCODE_F:
-			chip->key[0xE] = 1;
-			break;
-		case SDL_SCANCODE_Z:
-			chip->key[0xA] = 1;
-			break;
-		case SDL_SCANCODE_X:
-			chip->key[0x0] = 1;
-			break;
-		case SDL_SCANCODE_C:
-			chip->key[0xB] = 1;
-			break;
-		case SDL_SCANCODE_V:
-			chip->key[0xF] = 1;
-			break;
-		default:
-			break;
+int keymap(SDL_Scancode scancode) {
+	switch(scancode) {
+		case SDL_SCANCODE_1: return 0x1;
+		case SDL_SCANCODE_2: return 0x2;
+		case SDL_SCANCODE_3: return 0x3;
+		case SDL_SCANCODE_4: return 0xC;
+		case SDL_SCANCODE_Q: return 0x4;
+		case SDL_SCANCODE_W: return 0x5;
+		case SDL_SCANCODE_E: return 0x6;
+		case SDL_SCANCODE_R: return 0xD;
+		case SDL_SCANCODE_A: return 0x7;
+		case SDL_SCANCODE_S: return 0x8;
+		case SDL_SCANCODE_D: return 0x9;
+		case SDL_SCANCODE_F: return 0xE;
+		case SDL_SCANCODE_Z: return 0xA;
+		case SDL_SCANCODE_X: return 0x0;
+		case SDL_SCANCODE_C: return 0xB;
+		case SDL_SCANCODE_V: return 0xF;
+		default: return -1;
 	};
 }
 
+void handle_keydown(chip8* chip, SDL_KeyboardEvent event) {
+	chip->key[keymap(event.keysym.scancode)] = 1;
+}
+
 void handle_keyup(chip8* chip, SDL_KeyboardEvent event) {
-	switch(event.keysym.scancode) {
-		case SDL_SCANCODE_1:
-			chip->key[0x1] = 0;
-			break;
-		case SDL_SCANCODE_2:
-			chip->key[0x2] = 0;
-			break;
-		case SDL_SCANCODE_3:
-			chip->key[0x3] = 0;
-			break;
-		case SDL_SCANCODE_4:
-			chip->key[0xC] = 0;
-			break;
-		case SDL_SCANCODE_Q:
-			chip->key[0x4] = 0;
-			break;
-		case SDL_SCANCODE_W:
-			chip->key[0x5] = 0;
-			break;
-		case SDL_SCANCODE_E:
-			chip->key[0x6] = 0;
-			break;
-		case SDL_SCANCODE_R:
-			chip->key[0xD] = 0;
-			break;
-		case SDL_SCANCODE_A:
-			chip->key[0x7] = 0;
-			break;
-		case SDL_SCANCODE_S:
-			chip->key[0x8] = 0;
-			break;
-		case SDL_SCANCODE_D:
-			chip->key[0x9] = 0;
-			break;
-		case SDL_SCANCODE_F:
-			chip->key[0xE] = 0;
-			break;
-		case SDL_SCANCODE_Z:
-			chip->key[0xA] = 0;
-			break;
-		case SDL_SCANCODE_X:
-			chip->key[0x0] = 0;
-			break;
-		case SDL_SCANCODE_C:
-			chip->key[0xB] = 0;
-			break;
-		case SDL_SCANCODE_V:
-			chip->key[0xF] = 0;
-			break;
-		default:
-			break;
-	};
+	chip->key[keymap(event.keysym.scancode)] = 0;
 }
 
 int main(int argc, char** argv) {
@@ -192,7 +112,7 @@ int main(int argc, char** argv) {
 			chip.draw_flag = false;
 		}
 
-		SDL_Delay(5);
+		SDL_Delay(4);
 	}
 
 	free(pixels);
