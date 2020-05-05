@@ -46,6 +46,32 @@ void handle_keyup(chip8* chip, SDL_KeyboardEvent event) {
 	chip->key[keymap(event.keysym.scancode)] = 0;
 }
 
+void output_chip_state(chip8* chip) {
+	system("clear");
+	printf("opcode: %04X\n", chip->opcode);
+	for(int i = 0; i < 8; i++) {
+		printf("v%X=%02X  ", i, chip->V[i]);
+	}
+	printf("\n");
+	for(int i = 8; i < 16; i++) {
+		printf("v%X=%02X  ", i, chip->V[i]);
+	}
+	printf("I=%d\n", chip->I);
+	printf("Key: [ ");
+	for(int i = 0; i < 16; i++) {
+		printf("%d ", chip->key[i]);
+	}
+	printf("]\n");
+	printf("pc: %d\n", chip->pc);
+	printf("Stack: [ ");
+	for(int i = 0; i < 16; i++) {
+		printf("%d ", chip->stack[i]);
+	}
+	printf("]\n");
+	printf("sp: %d\n", chip->sp);
+	printf("delay_timer: %d    sound_timer: %d\n", chip->delay_timer, chip->sound_timer);
+}
+
 int main(int argc, char** argv) {
 	SDL_Window* window = NULL;
 	SDL_Texture* texture = NULL;
@@ -98,6 +124,10 @@ int main(int argc, char** argv) {
 		// simulate 1 cycle for chip8
 		chip8_tick(&chip);
 
+		// print state
+		output_chip_state(&chip);
+
+		// draw screen
 		if(chip.draw_flag) {
 			// copy pixels from gfx[] into pixels array
 			for(int y = 0; y < SCREEN_HEIGHT; y++) {
@@ -105,16 +135,17 @@ int main(int argc, char** argv) {
 					pixels[SCREEN_WIDTH*y + x] = 0xffffffff * chip.gfx[SCREEN_WIDTH*y + x];
 				}
 			}
-			// SDL_RenderClear(renderer);
+			SDL_RenderClear(renderer);
 			SDL_UpdateTexture(texture, NULL, pixels, SCREEN_WIDTH * sizeof(Uint32));
 			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
 			chip.draw_flag = false;
 		}
 
-		SDL_Delay(4);
+		SDL_Delay(10);
 	}
 
+	system("clear");
 	free(pixels);
 	SDL_DestroyTexture(texture);
 	SDL_DestroyRenderer(renderer);

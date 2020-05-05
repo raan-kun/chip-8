@@ -100,8 +100,8 @@ void chip8_tick(chip8* chip) {
 	switch(opcode & 0xF000) {
 		// temp storage variables -- have to declare them here
 		unsigned char   reg;
-		unsigned char   reg_x;
-		unsigned char   reg_y;
+		unsigned char   opcode_x;
+		unsigned char   opcode_y;
 		unsigned short  x_coord;
 		unsigned short  y_coord;
 		unsigned char   opcode_X;
@@ -111,9 +111,9 @@ void chip8_tick(chip8* chip) {
 
 		// multiple opcodes start with 0
 		case 0x0000:
-			switch(opcode & 0x000f) {
+			switch(opcode & 0x00ff) {
 				// 00E0 -- clears the screen
-				case 0x0000:
+				case 0x00e0:
 					for(int i = 0; i < 32; i++) {
 						for(int j = 0; j < 64; j++) {
 							chip->gfx[64*i + j] = 0;
@@ -123,9 +123,10 @@ void chip8_tick(chip8* chip) {
 					chip->pc += 2;
 					break;
 				// 00EE -- return from subroutine
-				case 0x000E:
+				case 0x00EE:
 					chip->sp -= 1;
 					chip->pc = chip->stack[chip->sp];
+					chip->stack[chip->sp] = 0;
 					chip->pc += 2;
 					break;
 				// 0NNN
@@ -167,9 +168,9 @@ void chip8_tick(chip8* chip) {
 			break;
 		// 5XY0 -- skip next instruction if V[X] == V[Y]
 		case 0x5000:
-			reg_x = (opcode & 0x0f00) >> 8;
-			reg_y = (opcode & 0x00f0) >> 4;
-			if(chip->V[reg_x] == chip->V[reg_y]) {
+			opcode_x = (opcode & 0x0f00) >> 8;
+			opcode_y = (opcode & 0x00f0) >> 4;
+			if(chip->V[opcode_x] == chip->V[opcode_y]) {
 				chip->pc += 4;
 			}
 			else {
@@ -188,64 +189,64 @@ void chip8_tick(chip8* chip) {
 			break;
 		// multiple opcodes start with 8
 		case 0x8000:
-			reg_x = (opcode & 0x0f00) >> 8;
-			reg_y = (opcode & 0x00f0) >> 4;
+			opcode_x = (opcode & 0x0f00) >> 8;
+			opcode_y = (opcode & 0x00f0) >> 4;
 			switch(opcode & 0x000f) {
 				// 8XY0 -- set V[X] to val in V[Y]
 				case 0x0000:
-					chip->V[reg_x] = chip->V[reg_y];
+					chip->V[opcode_x] = chip->V[opcode_y];
 					break;
 				// 8XY1 -- V[X] = V[X] | V[Y]
 				case 0x0001:
-					chip->V[reg_x] = chip->V[reg_x] | chip->V[reg_y];
+					chip->V[opcode_x] |= chip->V[opcode_y];
 					break;
 				// 8XY2 -- V[X] = V[X] & V[Y]
 				case 0x0002:
-					chip->V[reg_x] = chip->V[reg_x] & chip->V[reg_y];
+					chip->V[opcode_x] &= chip->V[opcode_y];
 					break;
 				// 8XY3 -- V[X] = V[X] ^ V[Y]
 				case 0x0003:
-					chip->V[reg_x] = chip->V[reg_x] ^ chip->V[reg_y];
+					chip->V[opcode_x] ^= chip->V[opcode_y];
 					break;
 				// 8XY4 -- V[X] += V[Y]. V[F] = 1 if there's a carry
 				case 0x004:
-					if(chip->V[reg_y] > 0xff - chip->V[reg_x]) {
+					if(chip->V[opcode_y] > 0xff - chip->V[opcode_x]) {
 						chip->V[0xf] = 1; // carry
 					}
 					else {
 						chip->V[0xf] = 0;
 					}
-					chip->V[reg_x] += chip->V[reg_y];
+					chip->V[opcode_x] += chip->V[opcode_y];
 					break;
 				// 8XY5 -- V[X] -= V[Y]. V[F] = 0 if there's a borrow
 				case 0x005:
-					if(chip->V[reg_y] > chip->V[reg_x]) {
+					if(chip->V[opcode_y] > chip->V[opcode_x]) {
 						chip->V[0xf] = 0; // borrow
 					}
 					else {
 						chip->V[0xf] = 1;
 					}
-					chip->V[reg_x] -= chip->V[reg_y];
+					chip->V[opcode_x] -= chip->V[opcode_y];
 					break;
 				// 8XY6 -- store LSB of V[X] in V[F], then V[X] >> 1
 				case 0x006:
-					chip->V[0xf] = chip->V[reg_x] & 0x0001;
-					chip->V[reg_x] >>= 1;
+					chip->V[0xf] = chip->V[opcode_x] >> 7;
+					chip->V[opcode_x] >>= 1;
 					break;
 				// 8XY7 -- V[X] = V[Y] - V[X]. V[F] = 0 if there's a borrow
 				case 0x007:
-					if(chip->V[reg_x] > chip->V[reg_y]) {
+					if(chip->V[opcode_x] > chip->V[opcode_y]) {
 						chip->V[0xf] = 0; // borrow
 					}
 					else {
 						chip->V[0xf] = 1;
 					}
-					chip->V[reg_x] = chip->V[reg_y] - chip->V[reg_x];
+					chip->V[opcode_x] = chip->V[opcode_y] - chip->V[opcode_x];
 					break;
 				// 8XYE -- store LSB of V[X] in V[F], then V[X] << 1
 				case 0x00E:
-					chip->V[0xf] = chip->V[reg_x] & 0x0001;
-					chip->V[reg_x] <<= 1;
+					chip->V[0xf] = chip->V[opcode_x] >> 7;
+					chip->V[opcode_x] <<= 1;
 					break;
 				default:
 					printf("ERROR -- Unknown opcode: 0x%X\n", opcode);
@@ -255,9 +256,9 @@ void chip8_tick(chip8* chip) {
 			break;
 		// 9XY0 -- skip next instruction if V[X] != V[Y]
 		case 0x9000:
-			reg_x = (opcode & 0x0f00) >> 8;
-			reg_y = (opcode & 0x00f0) >> 4;
-			if(chip->V[reg_x] != chip->V[reg_y]) {
+			opcode_x = (opcode & 0x0f00) >> 8;
+			opcode_y = (opcode & 0x00f0) >> 4;
+			if(chip->V[opcode_x] != chip->V[opcode_y]) {
 				chip->pc += 4;
 			}
 			else {
@@ -291,7 +292,6 @@ void chip8_tick(chip8* chip) {
 			for(int y_line = 0; y_line < height; y_line++) {
 				// grab 1 line from the sprite
 				unsigned char sprite_line = chip->memory[chip->I + y_line];
-
 				// for each bit (pixel) in this line,
 				for(int x_offset = 0; x_offset < 8; x_offset++) {
 					//  check if this pixel is 1
