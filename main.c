@@ -11,7 +11,7 @@
 // display resolution
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
-#define SCALE_FACTOR 5.0
+#define SCALE_FACTOR 10.0
 
 int display_width = SCREEN_WIDTH * SCALE_FACTOR;
 int display_height = SCREEN_HEIGHT * SCALE_FACTOR;
@@ -145,16 +145,15 @@ int main(int argc, char** argv) {
 		printf("SDL failed initialising: %s\n", SDL_GetError());
 		return 1;
 	}
-	SDL_CreateWindowAndRenderer(display_width, display_height, SDL_WINDOW_SHOWN, &window, &renderer);
+	window = SDL_CreateWindow("CHIP-8 Emulator", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, display_width, display_height, SDL_WINDOW_SHOWN);
+	renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE | SDL_RENDERER_TARGETTEXTURE);
+	SDL_RenderSetScale(renderer, SCALE_FACTOR, SCALE_FACTOR);
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, SCREEN_WIDTH, SCREEN_HEIGHT);
 	Uint32* pixels = calloc(SCREEN_WIDTH*SCREEN_HEIGHT, sizeof(Uint32));
-
-	SDL_RenderSetScale(renderer, SCALE_FACTOR, SCALE_FACTOR);
 
 	// main loop
 	bool quit = false;
 	while(!quit) {
-		SDL_UpdateTexture(texture, NULL, pixels, SCREEN_WIDTH * sizeof(Uint32));
 
 		// event loop
 		while(SDL_PollEvent(&event) != 0) {
@@ -186,7 +185,8 @@ int main(int argc, char** argv) {
 					pixels[SCREEN_WIDTH*y + x] = 0xffffffff * chip.gfx[SCREEN_WIDTH*y + x];
 				}
 			}
-			SDL_RenderClear(renderer);
+			// SDL_RenderClear(renderer);
+			SDL_UpdateTexture(texture, NULL, pixels, SCREEN_WIDTH * sizeof(Uint32));
 			SDL_RenderCopy(renderer, texture, NULL, NULL);
 			SDL_RenderPresent(renderer);
 			chip.draw_flag = false;
