@@ -85,7 +85,7 @@ void chip8_load_program(chip8* chip, const char* filename) {
 }
 
 // emulates one CPU cycle
-void chip8_tick(chip8* chip) {
+void chip8_emulate_cycle(chip8* chip) {
 	// fetch opcode
 	// opcodes are 2 bytes but memory locations are 1 byte, 
 	// so we must access two memory locations and merge the two parts of the instruction together
@@ -425,7 +425,9 @@ void chip8_tick(chip8* chip) {
 			printf("ERROR -- Unknown opcode: 0x%X\n", opcode);
 
 	};
+}
 
+void chip8_tick(chip8* chip) {
 	// update timers
 	if(chip->delay_timer > 0) {
 		chip->delay_timer -= 1;

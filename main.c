@@ -8,6 +8,10 @@
 #include <SDL2/SDL_events.h>
 #include "chip8.h"
 
+// cpu clock speed
+#define CLOCK_HZ 60.0
+#define CLOCK_RATE_MS ((int) ((1000.0 / CLOCK_HZ) + 0.5)) // rounded up
+
 // display resolution
 #define SCREEN_WIDTH 64
 #define SCREEN_HEIGHT 32
@@ -76,13 +80,14 @@ int main(int argc, char** argv) {
 	SDL_Window* window = NULL;
 	SDL_Texture* texture = NULL;
 	SDL_Renderer* renderer = NULL;
-
 	SDL_Event event;
 	SDL_KeyboardEvent kb_event;
 
-	chip8 chip;
+	Uint32 time_now;
+	Uint32 time_prev;
 
 	// initialise chip8
+	chip8 chip;
 	chip8_init(&chip);
 	chip8_load_program(&chip, argv[1]);
 
@@ -97,10 +102,14 @@ int main(int argc, char** argv) {
 	texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STATIC, SCREEN_WIDTH, SCREEN_HEIGHT);
 	Uint32* pixels = calloc(SCREEN_WIDTH*SCREEN_HEIGHT, sizeof(Uint32));
 
+	// this ensures timers run from the first iteration if required
+	time_prev = SDL_GetTicks();
+	SDL_Delay(17);
+	
+
 	// main loop
 	bool quit = false;
 	while(!quit) {
-
 		// event loop
 		while(SDL_PollEvent(&event) != 0) {
 			switch(event.type) {
@@ -121,13 +130,10 @@ int main(int argc, char** argv) {
 			};
 		}
 
-		// simulate 1 cycle for chip8
-		chip8_tick(&chip);
+		// emulate 1 cpu cycle
+		chip8_emulate_cycle(&chip);
 
-		// print state
-		output_chip_state(&chip);
-
-		// draw screen
+		// draw screen if we need to
 		if(chip.draw_flag) {
 			// copy pixels from gfx[] into pixels array
 			for(int y = 0; y < SCREEN_HEIGHT; y++) {
@@ -142,7 +148,15 @@ int main(int argc, char** argv) {
 			chip.draw_flag = false;
 		}
 
-		SDL_Delay(10);
+		// limit timer updates to 60Hz
+		time_now = SDL_GetTicks();
+		if((int)(time_now - time_prev + 0.5) >= CLOCK_RATE_MS) {
+			chip8_tick(&chip);
+			time_prev = time_now;
+		}
+
+		// print state
+		output_chip_state(&chip);
 	}
 
 	system("clear");
