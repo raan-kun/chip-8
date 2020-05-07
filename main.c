@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
 	// this ensures timers run from the first iteration if required
 	time_prev = SDL_GetTicks();
 	SDL_Delay(17);
-	
+
 
 	// main loop
 	bool quit = false;
@@ -126,7 +126,7 @@ int main(int argc, char** argv) {
 					break;
 				default:
 					// unhandled event
-					break;	
+					break;
 			};
 		}
 
